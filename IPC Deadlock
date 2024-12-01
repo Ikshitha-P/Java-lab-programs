@@ -1,0 +1,160 @@
+class A {
+    synchronized void foo(B b) {
+        String name = Thread.currentThread().getName();
+        System.out.println(name + " entered A.foo");
+
+        try {
+            Thread.sleep(1000);
+        } catch (Exception e) {
+            System.out.println("A Interrupted");
+        }
+
+        System.out.println(name + " trying to call B.last()");
+        b.last();
+    }
+
+    void last() {
+        System.out.println("Inside A.last");
+    }
+}
+
+class B {
+    synchronized void bar(A a) {
+        String name = Thread.currentThread().getName();
+        System.out.println(name + " entered B.bar");
+
+        try {
+            Thread.sleep(1000);
+        } catch (Exception e) {
+            System.out.println("B Interrupted");
+        }
+
+        System.out.println(name + " trying to call A.last()");
+        a.last();
+    }
+
+    void last() {
+        System.out.println("Inside B.last");
+    }
+}
+
+class Deadlock implements Runnable {
+    A a = new A();
+    B b = new B();
+
+    Deadlock() {
+        Thread.currentThread().setName("MainThread");
+
+        // Create a new thread to simulate deadlock
+        Thread t = new Thread(this, "RacingThread");
+        t.start();
+
+        // Main thread acquires lock on A and tries to call B.last()
+        a.foo(b);
+        System.out.println("Back in main thread");
+    }
+
+    public void run() {
+        // This thread acquires lock on B and tries to call A.last()
+        b.bar(a);
+        System.out.println("Back in other thread");
+    }
+
+    public static void main(String args[]) {
+        System.out.println("Ikshitha P");
+        new Deadlock();
+    }
+}
+
+
+
+
+
+
+
+
+class Q {
+    int n;
+    boolean valueSet = false; // Indicates whether a value has been produced but not yet consumed
+
+    // Consumer method
+    synchronized int get() {
+        while (!valueSet) { // Wait if no value is available
+            try {
+                System.out.println("\nConsumer waiting\n");
+                wait();
+            } catch (InterruptedException e) {
+                System.out.println("InterruptedException caught");
+            }
+        }
+
+        System.out.println("Got: " + n);
+        valueSet = false; // Value has been consumed
+        System.out.println("\nIntimate Producer\n");
+        notify(); // Notify producer to produce the next value
+        return n;
+    }
+
+    // Producer method
+    synchronized void put(int n) {
+        while (valueSet) { // Wait if the previous value hasn't been consumed
+            try {
+                System.out.println("\nProducer waiting\n");
+                wait();
+            } catch (InterruptedException e) {
+                System.out.println("InterruptedException caught");
+            }
+        }
+
+        this.n = n; // Store the produced value
+        valueSet = true; // Mark the value as produced
+        System.out.println("Put: " + n);
+        System.out.println("\nIntimate Consumer\n");
+        notify(); // Notify consumer to consume the value
+    }
+}
+
+class Producer implements Runnable {
+    Q q;
+
+    Producer(Q q) {
+        this.q = q;
+        new Thread(this, "Producer").start();
+    }
+
+    public void run() {
+        int i = 0;
+        while (i < 15) {
+            q.put(i++); // Produce values from 0 to 14
+        }
+    }
+}
+
+class Consumer implements Runnable {
+    Q q;
+
+    Consumer(Q q) {
+        this.q = q;
+        new Thread(this, "Consumer").start();
+    }
+
+    public void run() {
+        int i = 0;
+        while (i < 15) {
+            int r = q.get(); // Consume values
+            System.out.println("Consumed: " + r);
+            i++;
+        }
+    }
+}
+
+public class PCFixed {
+    public static void main(String args[]) {
+System.out.println("Ikshitha P");
+        Q q = new Q(); // Shared resource
+        new Producer(q); // Create producer
+        new Consumer(q); // Create consumer
+        System.out.println("Press Control-C to stop.");
+    }
+}
+
